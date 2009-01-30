@@ -1,0 +1,28 @@
+- what is spork?
+A way to cleanly handle process forking in Sinatra when using Passenger, aka "sporking some code".
+This will allow you to properly execute some code asynchronously, which otherwise does not work correctly.
+
+- what if I do not spork?
+You would like to have your route matcher trigger some long running task, but quickly return to the caller. So you might just try to use Kernal.fork, right? However, if you are running under Passenger, you would discover to your great unhappiness that browser sits there waiting for your long running process to finish before returning.
+
+- so spork instead
+Instead, just use your humble spork to get the job done. spork will fixup the underlying Passenger/Rack problems, so your code sporks, er forks they way your expect. For example:
+
+  get "/" do
+    @log = Logger.new(STDERR)
+    spock = Spork.spork(:logger => @log) do
+      sleep 5
+    end
+    "Our work here is done, my friends" # returns immediately, not waiting for task
+  end
+
+If you inspect the Sinatra log, you will discover something like the following:
+  127.0.0.1 - - [30/Jan/2009 15:17:48] "GET / HTTP/1.1" 200 33 0.0028
+  D, [2009-01-30T15:17:48.316859 #29286] DEBUG -- : spork> child PID = 29286
+  I, [2009-01-30T15:17:53.316363 #29286]  INFO -- : spork> child[29286] took 4.999625 sec
+
+- who made spork?
+Written by Ron Evans
+More info at http://deadprogrammersociety.com
+
+Mostly lifted from the Spawn plugin for Rails (http://github.com/tra/spawn) but with all of the Rails stuff removed.... cause you are using Sinatra. If you are using Rails, Spawn is what you need. If you are using something else besides Sinatra that is Rack-based under Passenger, and you are having trouble with asynch processing, let me know if spork helped you.
